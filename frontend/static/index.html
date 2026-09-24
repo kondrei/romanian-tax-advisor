@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Romanian Tax Advisor Agent</title>
+<!-- Material Symbols & Marked.js for Markdown parsing -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root {
+    --accent: #0f52ba;
+    --accent-hover: #0b3c8a;
+    --bg: #f4f6f9;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --tool-text: #94a3b8;
+    --bubble-agent: #f8fafc;
+    --header-bg: linear-gradient(135deg, #0f52ba 0%, #1e40af 100%);
+    --header-text: #ffffff;
+  }
+
+  [data-theme="dark"] {
+    --accent: #3b82f6;
+    --accent-hover: #60a5fa;
+    --bg: #0f172a;
+    --card-bg: #1e293b;
+    --border: #334155;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --tool-text: #64748b;
+    --bubble-agent: #334155;
+    --header-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    --header-text: #f8fafc;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    display: flex;
+    justify-content: center;
+    height: 100vh;
+    transition: background 0.3s, color 0.3s;
+  }
+  
+  /* 80% container width requirement */
+  .app-container {
+    width: 80%;
+    max-width: 1200px;
+    min-width: 320px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--card-bg);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    transition: background 0.3s, border 0.3s;
+  }
+
+  header {
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 1rem 1.5rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 10;
+  }
+  .header-left { display: flex; align-items: center; gap: 0.6rem; }
+  .header-right { display: flex; align-items: center; gap: 0.8rem; }
+
+  .token-badge {
+    background: rgba(255, 255, 255, 0.18);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .icon-btn {
+    background: rgba(255, 255, 255, 0.18);
+    border: none;
+    color: #fff;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .icon-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
+
+  #log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+
+  .msg-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    max-width: 85%;
+  }
+  .msg-wrapper.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+  .msg-wrapper.agent {
+    align-self: flex-start;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+
+  .msg-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bubble {
+    padding: 0.85rem 1.15rem;
+    border-radius: 14px;
+    background: var(--bubble-agent);
+    border: 1px solid var(--border);
+    line-height: 1.55;
+    font-size: 0.98rem;
+    position: relative;
+  }
+  .msg-wrapper.user .bubble {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-top-right-radius: 2px;
+  }
+  .msg-wrapper.agent .bubble {
+    border-top-left-radius: 2px;
+  }
+  .bubble.rich { background: transparent; border: none; padding: 0; }
+
+  /* Pulsing status text during tool execution */
+  .status-thinking {
+    font-style: italic;
+    color: var(--text-secondary);
+    animation: pulse 1.5s infinite;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+  /* Markdown Formatting inside bubbles */
+  .bubble table { border-collapse: collapse; margin: 0.5rem 0; width: 100%; }
+  .bubble th, .bubble td { border: 1px solid var(--border); padding: 0.4rem 0.7rem; font-size: 0.9rem; }
+  .bubble th { background: rgba(0,0,0,0.05); text-align: left; }
+  .bubble code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; background: rgba(0,0,0,0.06); padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.88rem; }
+  .bubble pre { background: rgba(0,0,0,0.06); padding: 0.7rem; border-radius: 6px; overflow-x: auto; }
+
+  /* Copy button & Tool tag */
+  .msg-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-top: 0.35rem;
+  }
+  .tool-tag {
+    font-size: 0.8rem;
+    color: var(--tool-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+  .copy-btn {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.15rem 0.45rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: var(--border); }
+
+  /* Vertical Sentences Prompts Section */
+  .prompts-section {
+    padding: 0.8rem 1.5rem;
+    background: var(--card-bg);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .prompts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.2rem;
+  }
+
+  .prompts-vertical-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    width: 100%;
+  }
+
+  .prompt-sentence-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-align: left;
+    width: 100%;
+  }
+
+  .prompt-sentence-item:hover {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+    transform: translateX(4px);
+  }
+
+  .prompt-sentence-item .icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .shuffle-inline-btn {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+  .shuffle-inline-btn:hover {
+    background: var(--bg);
+  }
+
+  form {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.8rem 1.5rem 1.2rem 1.5rem;
+    background: var(--card-bg);
+  }
+  input {
+    flex: 1;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.98rem;
+    outline: none;
+    background: var(--bg);
+    color: var(--text-primary);
+    transition: border 0.2s, background 0.3s, color 0.3s;
+  }
+  input:focus { border-color: var(--accent); }
+  button.send-btn {
+    padding: 0.8rem 1.4rem;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button.send-btn:hover { background: var(--accent-hover); }
+
+  /* --- A2UI component styles --- */
+  .a2card { border: 1px solid var(--border); border-radius: 12px; padding: 1rem; background: var(--card-bg); box-shadow: 0 1px 3px rgba(0,0,0,.06); max-width: 100%; margin-top: 0.6rem; }
+  .a2card + .a2card, .a2col > .a2card { margin-top: 0.6rem; }
+  .a2col { display: flex; flex-direction: column; gap: 0.4rem; }
+  .a2row { display: flex; flex-direction: row; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+  .a2row.between { justify-content: space-between; }
+  .a2text { margin: 0; line-height: 1.4; }
+  .a2text.a2-h1 { font-size: 1.5rem; font-weight: 700; }
+  .a2text.a2-h2 { font-size: 1.25rem; font-weight: 700; }
+  .a2text.a2-h3 { font-size: 1.1rem; font-weight: 600; }
+  .a2text.a2-h4 { font-size: 1.0rem; font-weight: 600; }
+  .a2text.a2-caption { font-size: 0.85rem; color: var(--text-secondary); }
+  .a2divider { border: none; border-top: 1px solid var(--border); margin: 0.4rem 0; width: 100%; }
+  .a2img { max-width: 100%; border-radius: 8px; display: block; }
+  .material-symbols-outlined { font-family: 'Material Symbols Outlined'; font-size: 1.25rem; line-height: 1; vertical-align: middle; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <header>
+    <div class="header-left">
+      <span>🇷🇴</span>
+      <span>Romanian Tax Advisor Agent</span>
+    </div>
+    <div class="header-right">
+      <div class="token-badge">
+        <span>⚡ Tokens spent:</span>
+        <span id="total-tokens">0</span>
+      </div>
+      <button class="icon-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+        <span class="material-symbols-outlined" id="theme-icon">dark_mode</span>
+      </button>
+      <button class="icon-btn" onclick="resetChat()" title="Reset Session">
+        <span class="material-symbols-outlined">refresh</span>
+      </button>
+    </div>
+  </header>
+
+  <div id="log"></div>
+
+  <!-- Vertical Full-Sentence Suggested Prompts Section -->
+  <div class="prompts-section">
+    <div class="prompts-header">
+      <span>💡 Exemple de întrebări pentru consultanță fiscală:</span>
+      <button class="shuffle-inline-btn" onclick="renderRandomPrompts()">
+        <span class="material-symbols-outlined" style="font-size:1rem;">shuffle</span>
+        <span>Alte exemple</span>
+      </button>
+    </div>
+    <div class="prompts-vertical-container" id="prompts-container"></div>
+  </div>
+
+  <form id="form">
+    <input id="input" placeholder="Întreabă despre taxe, microîntreprinderi, PFA sau calculează impozite..." autocomplete="off" autofocus>
+    <button class="send-btn">Trimite</button>
+  </form>
+</div>
+
+<script>
+const log = document.getElementById("log");
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+const totalTokensEl = document.getElementById("total-tokens");
+const themeIcon = document.getElementById("theme-icon");
+const promptsContainer = document.getElementById("prompts-container");
+
+let cumulativeTokens = 0;
+let userId = "user-" + Math.random().toString(36).substring(2, 9);
+
+/* Full sentence prompt pool */
+const SENTENCE_PROMPTS = [
+  { icon: "📊", sentence: "Cum se calculează impozitul pe venit de 1% vs 3% pentru o microîntreprindere în 2026?" },
+  { icon: "⚖️", sentence: "Care sunt plafoanele CASS și CAS aplicabile veniturilor brute realizate din PFA?" },
+  { icon: "📜", sentence: "Ce prevederi specifice și condiții legale conține Articolul 47 din Codul Fiscal?" },
+  { icon: "🖼️", sentence: "Generează o reprezentare vizuală sub formă de infografic pentru taxe PFA." },
+  { icon: "💶", sentence: "Cum se aplică impozitul pe dividende de 8% și care sunt plafoanele CASS aferente?" },
+  { icon: "🏢", sentence: "Care este diferența dintre sistemul real de impozitare și normele de venit la PFA?" },
+  { icon: "💻", sentence: "Cum funcționează facilitățile și scutirile fiscale pentru angajații din domeniul IT în 2026?" },
+  { icon: "📅", sentence: "Care este termenul limită legal pentru depunerea Declarației Unice (Formularul 212)?" },
+  { icon: "🚗", sentence: "Ce nivel de deductibilitate au cheltuielile cu combustibilul și mașina pentru PFA?" },
+  { icon: "🛍️", sentence: "Care sunt cotele de TVA standard și reduse aplicabile în România în prezent?" }
+];
+
+function renderRandomPrompts() {
+  promptsContainer.innerHTML = "";
+  const shuffled = [...SENTENCE_PROMPTS].sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, 3);
+
+  selected.forEach(item => {
+    const btn = el("div", "prompt-sentence-item");
+    const icon = el("span", "icon", item.icon);
+    const text = el("span", null, item.sentence);
+    btn.appendChild(icon);
+    btn.appendChild(text);
+
+    btn.onclick = () => sendPrompt(item.sentence);
+    promptsContainer.appendChild(btn);
+  });
+}
+
+function toggleTheme() {
+  const isDark = document.body.getAttribute("data-theme") === "dark";
+  document.body.setAttribute("data-theme", isDark ? "light" : "dark");
+  themeIcon.textContent = isDark ? "dark_mode" : "light_mode";
+}
+
+function resetChat() {
+  log.innerHTML = "";
+  cumulativeTokens = 0;
+  totalTokensEl.textContent = "0";
+  userId = "user-" + Math.random().toString(36).substring(2, 9);
+  renderRandomPrompts();
+}
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function createMessage(who) {
+  const wrapper = el("div", "msg-wrapper " + who);
+  const avatar = el("div", "avatar", who === "user" ? "👤" : "🏛️");
+  const content = el("div", "msg-content");
+  const bubble = el("div", "bubble");
+
+  content.appendChild(bubble);
+  wrapper.appendChild(avatar);
+  wrapper.appendChild(content);
+
+  log.appendChild(wrapper);
+  log.scrollTop = log.scrollHeight;
+  return { wrapper, content, bubble };
+}
+
+function sendPrompt(text) {
+  input.value = text;
+  form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+}
+
+function copyText(txt, btn) {
+  navigator.clipboard.writeText(txt).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = "Copied!";
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+function extractAndCleanA2UI(text) {
+  let cleanText = text;
+  let extractedA2UI = [];
+
+  const pattern = /<a2ui-json>([\s\S]*?)<\/a2ui-json>/g;
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    try {
+      const data = JSON.parse(match[1].trim());
+      extractedA2UI.push(data);
+    } catch (e) {}
+  }
+
+  cleanText = text.replace(pattern, "").trim();
+  return { cleanText, extractedA2UI };
+}
+
+/* Initial render of random vertical sentence prompts */
+renderRandomPrompts();
+
+/* ----------------------------------------------------------------------------
+ * A2UI mini-renderer
+ * -------------------------------------------------------------------------- */
+
+function boundStr(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v.literalString === "string") return v.literalString;
+  return "";
+}
+
+function childIds(props) {
+  const ids = [];
+  if (props && typeof props.child === "string") ids.push(props.child);
+  const ch = props && props.children;
+  if (ch && Array.isArray(ch.explicitList)) for (const c of ch.explicitList) if (typeof c === "string") ids.push(c);
+  return ids;
+}
+
+function iconName(n) { return String(n || "").replace(/([a-z0-9])([A-Z])/g, "$1_$2").replace(/\s+/g, "_").toLowerCase(); }
+
+function buildNode(id, comps, seen) {
+  if (!id || seen.has(id)) return null;
+  seen.add(id);
+  const spec = comps[id];
+  if (!spec || typeof spec !== "object") return null;
+  const type = Object.keys(spec)[0];
+  const props = spec[type] || {};
+  const kids = () => childIds(props).map(cid => buildNode(cid, comps, seen)).filter(Boolean);
+
+  switch (type) {
+    case "Card": {
+      const d = el("div", "a2card"); kids().forEach(n => d.appendChild(n)); return d;
+    }
+    case "Column":
+    case "List": {
+      const horizontal = type === "List" && props.direction === "horizontal";
+      const d = el("div", horizontal ? "a2row" : "a2col"); kids().forEach(n => d.appendChild(n)); return d;
+    }
+    case "Row": {
+      const d = el("div", "a2row" + (props.distribution === "spaceBetween" ? " between" : ""));
+      kids().forEach(n => d.appendChild(n)); return d;
+    }
+    case "Text": {
+      const t = el("div", "a2text");
+      const hint = String(props.usageHint || "body").toLowerCase();
+      if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(hint)) t.classList.add("a2-" + hint);
+      else if (hint === "caption") t.classList.add("a2-caption");
+      t.textContent = boundStr(props.text);
+      return t;
+    }
+    case "Divider":
+      return el("hr", "a2divider");
+    case "Image": {
+      const src = boundStr(props.url || props.src);
+      if (!/^https?:\/\//i.test(src)) return null;
+      const img = el("img", "a2img"); img.src = src; img.alt = boundStr(props.alt) || ""; return img;
+    }
+    case "Icon": {
+      const s = el("span", "material-symbols-outlined"); s.textContent = iconName(boundStr(props.name) || props.name); return s;
+    }
+    default:
+      return null;
+  }
+}
+
+function renderSurface(messages, container) {
+  const comps = {};
+  const roots = [];
+  for (const m of messages) {
+    if (m.beginRendering && typeof m.beginRendering.root === "string") roots.push(m.beginRendering.root);
+    const su = m.surfaceUpdate;
+    if (su && Array.isArray(su.components)) for (const c of su.components) if (c && c.id && c.component) comps[c.id] = c.component;
+  }
+  let rootIds = roots.filter(r => comps[r]);
+  if (rootIds.length === 0) {
+    const referenced = new Set();
+    for (const id in comps) { const spec = comps[id]; childIds(spec[Object.keys(spec)[0]] || {}).forEach(c => referenced.add(c)); }
+    rootIds = Object.keys(comps).filter(id => !referenced.has(id));
+  }
+  let drew = false;
+  for (const rid of rootIds) { const node = buildNode(rid, comps, new Set()); if (node) { container.appendChild(node); drew = true; } }
+  return drew;
+}
+
+function flattenText(messages) {
+  const out = [];
+  for (const m of messages) {
+    const su = m.surfaceUpdate;
+    if (su && Array.isArray(su.components)) for (const c of su.components) if (c && c.component && c.component.Text) out.push(boundStr(c.component.Text.text));
+  }
+  return out.join("\n").trim();
+}
+
+form.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+
+  const userMsg = createMessage("user");
+  userMsg.bubble.textContent = text;
+  input.value = "";
+
+  renderRandomPrompts();
+
+  const agentMsg = createMessage("agent");
+  const b = agentMsg.bubble;
+  let rawText = "";
+
+  // Set initial status indicator (<500ms feedback)
+  b.innerHTML = '<span class="status-thinking">⚡ Agentul fiscal procesează interogarea...</span>';
+
+  const toolsUsed = new Set();
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text, user_id: userId })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`HTTP ${res.status}: ${errText}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let a2uiParts = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === "[DONE]") continue;
+
+        try {
+          const item = JSON.parse(payload);
+          if (item.kind === "text") {
+            rawText += item.text;
+            const { cleanText } = extractAndCleanA2UI(rawText);
+            b.innerHTML = typeof marked !== "undefined" ? marked.parse(cleanText) : cleanText;
+            log.scrollTop = log.scrollHeight;
+          } else if (item.kind === "status") {
+            if (!rawText) {
+              b.innerHTML = `<span class="status-thinking">${item.text}</span>`;
+            }
+          } else if (item.kind === "a2ui") {
+            a2uiParts.push(item.data);
+          } else if (item.kind === "tool_call" && item.tool) {
+            toolsUsed.add(item.tool);
+          } else if (item.kind === "usage" && item.total_tokens) {
+            cumulativeTokens += item.total_tokens;
+            totalTokensEl.textContent = cumulativeTokens.toLocaleString();
+          }
+        } catch (e) {
+          console.error("Failed to parse SSE payload", e);
+        }
+      }
+    }
+
+    if (buffer.trim().startsWith("data:")) {
+      const payload = buffer.trim().slice(5).trim();
+      if (payload && payload !== "[DONE]") {
+        try {
+          const item = JSON.parse(payload);
+          if (item.kind === "text") {
+            rawText += item.text;
+          } else if (item.kind === "a2ui") {
+            a2uiParts.push(item.data);
+          } else if (item.kind === "tool_call" && item.tool) {
+            toolsUsed.add(item.tool);
+          } else if (item.kind === "usage" && item.total_tokens) {
+            cumulativeTokens += item.total_tokens;
+            totalTokensEl.textContent = cumulativeTokens.toLocaleString();
+          }
+        } catch (e) {}
+      }
+    }
+
+    // Process rawText for any embedded <a2ui-json> blocks
+    const { cleanText, extractedA2UI } = extractAndCleanA2UI(rawText);
+    b.innerHTML = typeof marked !== "undefined" ? marked.parse(cleanText) : cleanText;
+    for (const a2 of extractedA2UI) a2uiParts.push(a2);
+
+    if (a2uiParts.length) {
+      const cardContainer = el("div", "a2ui-render-container");
+      if (renderSurface(a2uiParts, cardContainer)) {
+        b.appendChild(cardContainer);
+      } else {
+        b.appendChild(el("div", null, flattenText(a2uiParts) || "(no card content)"));
+      }
+    }
+
+    // Add message footer with tool tags and copy button
+    const footer = el("div", "msg-footer");
+
+    if (toolsUsed.size > 0) {
+      const toolTag = el("span", "tool-tag", `[${Array.from(toolsUsed).map(t => "Tool: " + t).join(", ")}]`);
+      footer.appendChild(toolTag);
+    }
+
+    if (cleanText) {
+      const copyBtn = el("button", "copy-btn", "Copy");
+      copyBtn.onclick = () => copyText(cleanText, copyBtn);
+      footer.appendChild(copyBtn);
+    }
+
+    if (footer.children.length > 0) {
+      agentMsg.content.appendChild(footer);
+    }
+
+    if (!cleanText && !a2uiParts.length) {
+      b.textContent = "(no response)";
+    }
+  } catch (e) {
+    b.textContent = "Error: " + e.message;
+  }
+});
+</script>
+</body>
+</html>
