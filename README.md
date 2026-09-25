@@ -2,7 +2,7 @@
 
 An intelligent, multi-tool AI Tax Advisor built with the Google Agent Development Kit (ADK), deployed on Vertex AI Agent Engine, and paired with an interactive streaming web frontend.
 
-![Romanian Tax Advisor Demo](demo.gif)
+![Romanian Tax Advisor Demo](demo2.gif)
 
 ---
 
